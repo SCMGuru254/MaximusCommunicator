@@ -80,9 +80,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return;
           }
           
-          // Process the message with AI (simulated here)
-          // This is where you'd integrate with an actual AI model
+          // Process the message with AI 
+          const assistantName = await storage.getSetting("assistant_name");
+          const aiAssistantName = assistantName?.value || "Maximus";
+          
+          // Generate response based on message content or selection
           let aiResponse: string = "";
+          let estimatedResponseTime: string | undefined = undefined;
+          let formLink: string | undefined = undefined;
           
           // Check if the message is selecting a menu option
           if (/^[1-4]\./.test(content) || /^[a-d]\./.test(content)) {
@@ -146,11 +151,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
           
-          // Send AI response back to client
+          // Send AI response back to client with additional metadata
           ws.send(JSON.stringify({
             type: "ai_response",
             phoneNumber,
-            content: aiResponse
+            content: aiResponse,
+            estimatedResponseTime,
+            formLink,
+            isAutomatedMessage: true
           }));
           
           // Also broadcast the message to all connected clients
@@ -160,7 +168,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 type: "message_update",
                 contact,
                 incomingMessage: content,
-                aiResponse
+                aiResponse,
+                estimatedResponseTime,
+                formLink,
+                isAutomatedMessage: true
               }));
             }
           });
@@ -413,8 +424,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Process the message with AI (simulated here)
+      // Process the message with AI
+      const assistantName = await storage.getSetting("assistant_name");
+      const aiAssistantName = assistantName?.value || "Maximus";
+      
+      // Generate response based on message content or selection
       let aiResponse: string = "";
+      let estimatedResponseTime: string | undefined = undefined;
+      let formLink: string | undefined = undefined;
       
       // Check if the message is selecting a menu option
       if (/^[1-4]\./.test(content) || /^[a-d]\./.test(content)) {

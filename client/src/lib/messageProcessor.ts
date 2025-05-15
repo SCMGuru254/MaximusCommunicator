@@ -82,7 +82,10 @@ export function extractFormLink(message: string): string | null {
 /**
  * Format time for display in chat
  */
-export function formatMessageTime(date: Date | string): string {
+export function formatMessageTime(date: Date | string | null | undefined): string {
+  if (!date) {
+    return new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
   const messageDate = typeof date === 'string' ? new Date(date) : date;
   return messageDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
