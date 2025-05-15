@@ -25,6 +25,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a separate HTTP server for our API and WebSocket
   const httpServer = createServer(app);
   
+  // Initialize the default data in the database
+  try {
+    await storage.initializeDefaultData();
+    console.log("Default data initialized successfully");
+  } catch (error) {
+    console.error("Error initializing default data:", error);
+  }
+  
   // Setup WebSocket server on a different path to avoid conflicts with Vite
   const wss = new WebSocketServer({ 
     server: httpServer,
