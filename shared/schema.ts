@@ -106,6 +106,11 @@ export const defaultSettings = [
     key: "assistant_name",
     value: "Maximus",
     description: "Name of the AI assistant"
+  },
+  {
+    key: "nous_api_key",
+    value: "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",
+    description: "API key for Nous: DeepHermes 3 Mistral 24B"
   }
 ];
 

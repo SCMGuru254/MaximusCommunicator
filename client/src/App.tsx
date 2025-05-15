@@ -11,6 +11,9 @@ import MenuBuilder from "@/pages/menu-builder";
 import Security from "@/pages/security";
 import Analytics from "@/pages/analytics";
 import Help from "@/pages/help";
+import NousChat from "@/pages/NousChat";
+import NousSettings from "@/pages/NousSettings";
+import MainNavigation from "@/components/layout/MainNavigation";
 
 function Router() {
   return (
@@ -22,6 +25,8 @@ function Router() {
       <Route path="/security" component={Security} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/help" component={Help} />
+      <Route path="/nous-chat" component={NousChat} />
+      <Route path="/nous-settings" component={NousSettings} />
       {/* Fallback to 404 */}
       <Route component={NotFound} />
     </Switch>
@@ -33,7 +38,12 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <Router />
+        <div className="flex">
+          <MainNavigation />
+          <main className="flex-1">
+            <Router />
+          </main>
+        </div>
       </TooltipProvider>
     </QueryClientProvider>
   );

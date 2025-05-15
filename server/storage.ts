@@ -17,6 +17,7 @@ export interface IStorage {
   // Contact operations
   getContact(id: number): Promise<Contact | undefined>;
   getContactByPhoneNumber(phoneNumber: string): Promise<Contact | undefined>;
+  getContactById(id: number): Promise<Contact | undefined>;
   getAllContacts(): Promise<Contact[]>;
   createContact(contact: InsertContact): Promise<Contact>;
   updateContact(id: number, contact: Partial<InsertContact>): Promise<Contact | undefined>;
@@ -105,6 +106,10 @@ export class MemStorage implements IStorage {
     return Array.from(this.contacts.values()).find(
       (contact) => contact.phoneNumber === phoneNumber,
     );
+  }
+
+  async getContactById(id: number): Promise<Contact | undefined> {
+    return this.contacts.get(id);
   }
 
   async getAllContacts(): Promise<Contact[]> {

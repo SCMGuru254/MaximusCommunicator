@@ -10,6 +10,7 @@ import {
 } from "@shared/schema";
 import { WebSocketServer, WebSocket } from "ws";
 import { whatsappService } from "./whatsapp";
+import { nousService } from "./nous";
 
 // Utility function for validating request body
 const validateRequestBody = (schema: any, body: any) => {
@@ -72,6 +73,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
               isEncrypted: false // Actual encryption would happen in a real implementation
             });
           }
+        }
+        
+        // Handle incoming messages for Nous chat
+        else if (data.type === "nous_message") {
+          const { contactId, content } = data;
+          
+          // Get contact
+          const contact = await storage.getContactById(contactId);
+          if (!contact) {
+            ws.send(JSON.stringify({
+              type: "error",
+              message: `Contact with ID ${contactId} not found`
+            }));
+            return;
+          }
+          
+          // Process the message with Nous API
+          const response = await nousService.processIncomingMessage(contactId, content);
+          
+          // Send response back to client
+          ws.send(JSON.stringify({
+            type: "nous_response",
+            contactId,
+            content: response
+          }));
+          
+          // Also broadcast the message to all connected clients
+          wss.clients.forEach(client => {
+            if (client !== ws) {
+              client.send(JSON.stringify({
+                type: "message_update",
+                contact,
+                incomingMessage: content,
+                aiResponse: response
+              }));
+            }
+          });
+        }
           
           // Check if contact is exempted from AI
           if (contact.isExempted) {
@@ -196,6 +235,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // API Routes
+  
+  // Nous API
+  router.post('/nous/credentials', async (req: Request, res: Response) => {
+    try {
+      const { apiKey } = req.body;
+      
+      if (!apiKey) {
+        return res.status(400).json({ error: 'API key is required' });
+      }
+      
+      await nousService.setCredentials({ apiKey });
+      
+      res.status(200).json({ message: 'Nous API credentials updated successfully' });
+    } catch (error) {
+      console.error('Error updating Nous API credentials:', error);
+      res.status(500).json({ error: 'Failed to update Nous API credentials' });
+    }
+  });
+  
+  router.post('/nous/chat', async (req: Request, res: Response) => {
+    try {
+      const { content, contactId } = req.body;
+      
+      if (!content || !contactId) {
+        return res.status(400).json({ error: 'Content and contactId are required' });
+      }
+      
+      const response = await nousService.sendMessage(content, contactId);
+      
+      res.status(200).json({ response });
+    } catch (error) {
+      console.error('Error sending message to Nous API:', error);
+      res.status(500).json({ error: 'Failed to send message to Nous API' });
+    }
+  });
   
   // Contacts API
   router.get("/contacts", async (_req: Request, res: Response) => {
