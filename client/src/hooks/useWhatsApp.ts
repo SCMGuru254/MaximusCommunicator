@@ -87,7 +87,39 @@ export function useWhatsApp(): WhatsAppHook {
           
           switch (data.type) {
             case 'ai_response':
-              handleIncomingMessage(data.phoneNumber, data.content, false);
+              // Extract additional metadata from the response
+              const { phoneNumber, content, estimatedResponseTime, formLink, isAutomatedMessage } = data;
+              
+              // Create a custom property to track metadata for this message
+              const messageMetadata = {
+                estimatedResponseTime,
+                formLink,
+                isAutomatedMessage
+              };
+              
+              // Store metadata for this message to access later
+              setMessages(prevMessages => {
+                const messageId = Date.now();
+                
+                // Store metadata indexed by message ID
+                localStorage.setItem(`message_metadata_${messageId}`, JSON.stringify(messageMetadata));
+                
+                // Create and store the message
+                const newMessage = {
+                  id: messageId,
+                  contactId: 0,
+                  content,
+                  isFromContact: false,
+                  timestamp: new Date(),
+                  isEncrypted: false
+                };
+                
+                const contactMessages = prevMessages[phoneNumber] || [];
+                return {
+                  ...prevMessages,
+                  [phoneNumber]: [...contactMessages, newMessage]
+                };
+              });
               break;
               
             case 'exempted_message':
@@ -96,8 +128,40 @@ export function useWhatsApp(): WhatsAppHook {
               break;
               
             case 'message_update':
+              // Handle incoming message from contact
               handleIncomingMessage(data.contact.phoneNumber, data.incomingMessage, true);
-              handleIncomingMessage(data.contact.phoneNumber, data.aiResponse, false);
+              
+              // Extract additional metadata from the AI response
+              const metadata = {
+                estimatedResponseTime: data.estimatedResponseTime,
+                formLink: data.formLink,
+                isAutomatedMessage: data.isAutomatedMessage
+              };
+              
+              // Generate a unique message ID
+              const messageId = Date.now();
+              
+              // Store metadata indexed by message ID
+              localStorage.setItem(`message_metadata_${messageId}`, JSON.stringify(metadata));
+              
+              // Create and store the AI response
+              setMessages(prevMessages => {
+                const contactMessages = prevMessages[data.contact.phoneNumber] || [];
+                
+                const newMessage = {
+                  id: messageId,
+                  contactId: data.contact.id,
+                  content: data.aiResponse,
+                  isFromContact: false,
+                  timestamp: new Date(),
+                  isEncrypted: false
+                };
+                
+                return {
+                  ...prevMessages,
+                  [data.contact.phoneNumber]: [...contactMessages, newMessage]
+                };
+              });
               break;
               
             case 'error':

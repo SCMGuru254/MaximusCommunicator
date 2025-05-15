@@ -494,11 +494,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Return the AI response
+      // Return the AI response with additional metadata
       res.json({
         type: "ai_response",
         phoneNumber,
-        content: aiResponse
+        content: aiResponse,
+        estimatedResponseTime,
+        formLink,
+        isAutomatedMessage: true
       });
       
     } catch (error) {

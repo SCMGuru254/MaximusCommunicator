@@ -10,6 +10,20 @@ interface ChatInterfaceProps {
   onBack?: () => void;
 }
 
+// Helper function to get message metadata from localStorage
+const getMessageMetadata = (messageId: number, key: string): string | undefined => {
+  try {
+    const metadata = localStorage.getItem(`message_metadata_${messageId}`);
+    if (metadata) {
+      const parsed = JSON.parse(metadata);
+      return parsed[key];
+    }
+  } catch (error) {
+    console.error('Error retrieving message metadata:', error);
+  }
+  return undefined;
+};
+
 export default function ChatInterface({ phoneNumber, contactName, onBack }: ChatInterfaceProps) {
   const [inputValue, setInputValue] = useState('');
   const { messages, sendMessage, isConnected, reconnect } = useWhatsApp();
@@ -126,9 +140,9 @@ export default function ChatInterface({ phoneNumber, contactName, onBack }: Chat
             <ChatBubble 
               key={message.id} 
               message={message} 
-              formLink={extractFormLink(message.content) || (message.content.includes('personal') && formLink ? formLink : undefined)}
-              estimatedResponseTime={!message.isFromContact ? estimatedResponseTime : undefined}
-              isAutomatedMessage={!message.isFromContact && !!isAutomatedMessage}
+              formLink={extractFormLink(message.content) || getMessageMetadata(message.id, 'formLink') || (message.content.includes('personal') && formLink ? formLink : undefined)}
+              estimatedResponseTime={!message.isFromContact ? (getMessageMetadata(message.id, 'estimatedResponseTime') || estimatedResponseTime) : undefined}
+              isAutomatedMessage={!message.isFromContact && (getMessageMetadata(message.id, 'isAutomatedMessage') || !!isAutomatedMessage)}
               onOptionSelect={handleOptionSelect}
             />
           ))
