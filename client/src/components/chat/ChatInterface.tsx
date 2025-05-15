@@ -142,7 +142,7 @@ export default function ChatInterface({ phoneNumber, contactName, onBack }: Chat
               message={message} 
               formLink={extractFormLink(message.content) || getMessageMetadata(message.id, 'formLink') || (message.content.includes('personal') && formLink ? formLink : undefined)}
               estimatedResponseTime={!message.isFromContact ? (getMessageMetadata(message.id, 'estimatedResponseTime') || estimatedResponseTime) : undefined}
-              isAutomatedMessage={!message.isFromContact && (getMessageMetadata(message.id, 'isAutomatedMessage') || !!isAutomatedMessage)}
+              isAutomatedMessage={!message.isFromContact && (getMessageMetadata(message.id, 'isAutomatedMessage') === 'true' ? true : !!isAutomatedMessage)}
               onOptionSelect={handleOptionSelect}
             />
           ))
