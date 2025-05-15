@@ -11,11 +11,9 @@ export default function Settings() {
     <div className="bg-whatsapp-bg min-h-screen">
       {/* Header */}
       <div className="bg-whatsapp-dark text-white py-3 px-4 flex items-center shadow-md">
-        <Link href="/">
-          <a className="flex items-center">
-            <span className="material-icons mr-2">arrow_back</span>
-            <h1 className="font-medium text-xl">Settings</h1>
-          </a>
+        <Link href="/" className="flex items-center">
+          <span className="material-icons mr-2">arrow_back</span>
+          <h1 className="font-medium text-xl">Settings</h1>
         </Link>
       </div>
       

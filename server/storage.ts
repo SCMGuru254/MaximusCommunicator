@@ -113,10 +113,14 @@ export class MemStorage implements IStorage {
 
   async createContact(insertContact: InsertContact): Promise<Contact> {
     const id = this.contactCurrentId++;
+    // Ensure required fields are present with defaults if needed
     const contact: Contact = { 
-      ...insertContact, 
-      id, 
-      createdAt: new Date() 
+      id,
+      name: insertContact.name,
+      phoneNumber: insertContact.phoneNumber,
+      category: insertContact.category || "uncategorized",
+      isExempted: insertContact.isExempted ?? false,
+      createdAt: new Date()
     };
     this.contacts.set(id, contact);
     return contact;
@@ -159,8 +163,11 @@ export class MemStorage implements IStorage {
   async createMessage(insertMessage: InsertMessage): Promise<Message> {
     const id = this.messageCurrentId++;
     const message: Message = {
-      ...insertMessage,
       id,
+      contactId: insertMessage.contactId,
+      content: insertMessage.content,
+      isFromContact: insertMessage.isFromContact,
+      isEncrypted: insertMessage.isEncrypted ?? false,
       timestamp: new Date()
     };
     this.messages.set(id, message);
