@@ -9,6 +9,7 @@ import {
   insertSettingSchema
 } from "@shared/schema";
 import { WebSocketServer } from "ws";
+import { whatsappService } from "./whatsapp";
 
 // Utility function for validating request body
 const validateRequestBody = (schema: any, body: any) => {

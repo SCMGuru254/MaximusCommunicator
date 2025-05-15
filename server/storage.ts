@@ -202,8 +202,12 @@ export class MemStorage implements IStorage {
   async createMenuOption(insertMenuOption: InsertMenuOption): Promise<MenuOption> {
     const id = this.menuOptionCurrentId++;
     const menuOption: MenuOption = {
-      ...insertMenuOption,
       id,
+      title: insertMenuOption.title,
+      description: insertMenuOption.description || null,
+      parentId: insertMenuOption.parentId || null,
+      responseText: insertMenuOption.responseText || null,
+      order: insertMenuOption.order || 0
     };
     this.menuOptions.set(id, menuOption);
     return menuOption;
@@ -264,8 +268,12 @@ export class MemStorage implements IStorage {
     for (const option of defaultMenuOptions) {
       const id = this.menuOptionCurrentId++;
       const newOption: MenuOption = {
-        ...option,
         id,
+        title: option.title,
+        description: option.description || null,
+        parentId: option.parentId || null,
+        responseText: option.responseText || null,
+        order: option.order
       };
       this.menuOptions.set(id, newOption);
     }
