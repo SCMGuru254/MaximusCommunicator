@@ -8,7 +8,7 @@ import {
   insertMenuOptionSchema,
   insertSettingSchema
 } from "@shared/schema";
-import { WebSocketServer } from "ws";
+import { WebSocketServer, WebSocket } from "ws";
 import { whatsappService } from "./whatsapp";
 
 // Utility function for validating request body
@@ -515,6 +515,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
     } catch (error) {
       res.status(500).json({ message: "Error simulating WhatsApp message", error: (error as Error).message });
+    }
+  });
+  
+  // WhatsApp configuration route
+  router.post("/whatsapp/config", async (req: Request, res: Response) => {
+    try {
+      const { apiKey, phoneNumberId, businessAccountId } = req.body;
+      
+      if (!apiKey || !phoneNumberId || !businessAccountId) {
+        return res.status(400).json({ 
+          message: "API key, phone number ID, and business account ID are required" 
+        });
+      }
+      
+      await whatsappService.setCredentials({
+        apiKey,
+        phoneNumberId,
+        businessAccountId
+      });
+      
+      res.json({ message: "WhatsApp configuration updated successfully" });
+    } catch (error) {
+      console.error("Error updating WhatsApp configuration:", error);
+      res.status(500).json({ message: "Error updating WhatsApp configuration" });
+    }
+  });
+  
+  // Integrated version of the simulate/whatsapp route
+  router.post("/simulate/whatsapp", async (req: Request, res: Response) => {
+    try {
+      const { phoneNumber, content } = req.body;
+      
+      if (!phoneNumber || !content) {
+        return res.status(400).json({ message: "Phone number and content are required" });
+      }
+      
+      // Process the incoming message using our WhatsApp service
+      await whatsappService.processIncomingMessage(phoneNumber, content);
+      
+      // Broadcast the message to all connected clients
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: 'incoming_message',
+            data: {
+              phoneNumber,
+              content
+            }
+          }));
+        }
+      });
+      
+      res.json({ message: "WhatsApp message simulated successfully" });
+    } catch (error) {
+      console.error("Error simulating WhatsApp message:", error);
+      res.status(500).json({ message: "Error simulating WhatsApp message" });
+    }
+  });
+  
+  // WhatsApp webhook endpoint for receiving messages from the WhatsApp API
+  router.post("/webhooks/whatsapp", async (req: Request, res: Response) => {
+    try {
+      // This is where we would handle incoming messages from the WhatsApp API
+      // For security, we should verify the request is coming from WhatsApp
+      
+      // Extract the message data
+      const { entry } = req.body;
+      
+      if (!entry || !entry.length) {
+        return res.status(400).json({ message: "Invalid webhook payload" });
+      }
+      
+      // Process each message in the entry
+      for (const entryData of entry) {
+        const changes = entryData.changes || [];
+        
+        for (const change of changes) {
+          if (change.field === 'messages') {
+            const messages = change.value.messages || [];
+            
+            for (const message of messages) {
+              if (message.type === 'text') {
+                const phoneNumber = message.from;
+                const content = message.text.body;
+                
+                // Process the incoming message
+                await whatsappService.processIncomingMessage(phoneNumber, content);
+                
+                // Broadcast to connected WebSocket clients
+                wss.clients.forEach((client) => {
+                  if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({
+                      type: 'incoming_message',
+                      data: {
+                        phoneNumber,
+                        content
+                      }
+                    }));
+                  }
+                });
+              }
+            }
+          }
+        }
+      }
+      
+      // WhatsApp API expects a 200 OK response
+      res.status(200).send('OK');
+    } catch (error) {
+      console.error("Error processing WhatsApp webhook:", error);
+      // Still return 200 to WhatsApp to acknowledge receipt
+      res.status(200).send('OK');
     }
   });
   
