@@ -3,9 +3,10 @@ import { Link } from 'wouter';
 import ExemptedContacts from '@/components/settings/ExemptedContacts';
 import MenuOptions from '@/components/settings/MenuOptions';
 import SecuritySettings from '@/components/settings/SecuritySettings';
+import WhatsAppSettings from '@/components/settings/WhatsAppSettings';
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState<'ai' | 'contacts' | 'menu' | 'security'>('ai');
+  const [activeTab, setActiveTab] = useState<'ai' | 'contacts' | 'menu' | 'security' | 'whatsapp'>('ai');
   
   return (
     <div className="bg-whatsapp-bg min-h-screen">
@@ -45,6 +46,12 @@ export default function Settings() {
               onClick={() => setActiveTab('security')}
             >
               Security
+            </button>
+            <button
+              className={`flex-1 py-3 px-4 text-center ${activeTab === 'whatsapp' ? 'border-b-2 border-whatsapp-green text-whatsapp-green font-medium' : 'text-gray-600'}`}
+              onClick={() => setActiveTab('whatsapp')}
+            >
+              WhatsApp API
             </button>
           </div>
         </div>
@@ -93,6 +100,8 @@ export default function Settings() {
           {activeTab === 'menu' && <MenuOptions />}
           
           {activeTab === 'security' && <SecuritySettings />}
+          
+          {activeTab === 'whatsapp' && <WhatsAppSettings />}
         </div>
       </div>
     </div>
