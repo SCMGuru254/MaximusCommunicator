@@ -1,274 +1,102 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
-import { useApi } from '@/hooks/useApi';
-import { useSetting } from '@/hooks/useSetting';
-import { useWebSocket } from '@/hooks/useWebSocket';
+import { sendChatMessage } from '@/lib/ai';
 
 interface Message {
-  id: number;
   content: string;
-  isFromContact: boolean;
+  sender: 'user' | 'ai';
   timestamp: string;
-}
-
-interface Contact {
-  id: number;
-  name: string;
-  phoneNumber: string;
-  category: string;
-  isExempted: boolean;
 }
 
 export function NousChat() {
   const { toast } = useToast();
-  const api = useApi();
-  const socket = useWebSocket();
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
-  
-  const [message, setMessage] = useState<string>("");
   const [messages, setMessages] = useState<Message[]>([]);
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  
-  const [assistantName] = useSetting('assistant_name');
-  
-  // Load contacts
-  useEffect(() => {
-    const loadContacts = async () => {
-      try {
-        const response = await api.get('/contacts');
-        setContacts(response.data);
-      } catch (error) {
-        console.error('Error loading contacts:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load contacts. Please try again.",
-          variant: "destructive",
-        });
-      }
-    };
-    
-    loadContacts();
-  }, [api, toast]);
-  
-  // Load messages for selected contact
-  useEffect(() => {
-    const loadMessages = async () => {
-      if (!selectedContact) return;
-      
-      try {
-        const response = await api.get(`/messages/${selectedContact.id}`);
-        setMessages(response.data);
-        
-        // Scroll to bottom after messages load
-        setTimeout(() => {
-          if (scrollAreaRef.current) {
-            scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
-          }
-        }, 100);
-      } catch (error) {
-        console.error('Error loading messages:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load messages. Please try again.",
-          variant: "destructive",
-        });
-      }
-    };
-    
-    loadMessages();
-  }, [api, selectedContact, toast]);
-  
-  // Handle WebSocket messages
-  useEffect(() => {
-    if (!socket) return;
-    
-    const handleSocketMessage = (event: MessageEvent) => {
-      const data = JSON.parse(event.data);
-      
-      if (data.type === "nous_response" && selectedContact && data.contactId === selectedContact.id) {
-        // Add the AI response to the messages
-        setMessages(prev => [...prev, {
-          id: Date.now(), // Temporary ID until we refresh
-          content: data.content,
-          isFromContact: false,
-          timestamp: new Date().toISOString()
-        }]);
-        
-        // Scroll to bottom
-        setTimeout(() => {
-          if (scrollAreaRef.current) {
-            scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
-          }
-        }, 100);
-      }
-    };
-    
-    socket.addEventListener('message', handleSocketMessage);
-    
-    return () => {
-      socket.removeEventListener('message', handleSocketMessage);
-    };
-  }, [socket, selectedContact]);
-  
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
   const handleSendMessage = async () => {
-    if (!message.trim() || !selectedContact) return;
-    
+    if (!input.trim() || isLoading) return;
+
+    const userMessage: Message = {
+      content: input,
+      sender: 'user',
+      timestamp: new Date().toISOString()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
     setIsLoading(true);
-    
+
     try {
-      // Add the message to the UI immediately
-      const newMessage = {
-        id: Date.now(), // Temporary ID until we refresh
-        content: message,
-        isFromContact: true,
+      const response = await sendChatMessage(input);
+      const aiMessage: Message = {
+        content: response.message,
+        sender: 'ai',
         timestamp: new Date().toISOString()
       };
-      
-      setMessages(prev => [...prev, newMessage]);
-      
-      // Clear the input
-      setMessage("");
-      
-      // Scroll to bottom
-      setTimeout(() => {
-        if (scrollAreaRef.current) {
-          scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
-        }
-      }, 100);
-      
-      // Send the message via WebSocket
-      if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({
-          type: "nous_message",
-          contactId: selectedContact.id,
-          content: message
-        }));
-      } else {
-        // Fallback to REST API if WebSocket is not available
-        await api.post('/nous/chat', {
-          contactId: selectedContact.id,
-          content: message
-        });
-        
-        // Refresh messages
-        const response = await api.get(`/messages/${selectedContact.id}`);
-        setMessages(response.data);
-      }
+      setMessages(prev => [...prev, aiMessage]);
     } catch (error) {
-      console.error('Error sending message:', error);
       toast({
         title: "Error",
         description: "Failed to send message. Please try again.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   return (
-    <div className="container mx-auto py-10 grid grid-cols-4 gap-6 h-[calc(100vh-120px)]">
-      {/* Contacts sidebar */}
-      <Card className="col-span-1">
-        <CardHeader>
-          <CardTitle>Contacts</CardTitle>
-          <CardDescription>Select a contact to chat with</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[calc(100vh-250px)]">
-            <div className="space-y-2">
-              {contacts.map(contact => (
-                <div
-                  key={contact.id}
-                  className={`p-3 rounded-md cursor-pointer hover:bg-accent ${selectedContact?.id === contact.id ? 'bg-accent' : ''}`}
-                  onClick={() => setSelectedContact(contact)}
-                >
-                  <div className="flex items-center space-x-3">
-                    <Avatar>
-                      <AvatarFallback>{contact.name.substring(0, 2).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-medium">{contact.name}</p>
-                      <p className="text-sm text-muted-foreground">{contact.category}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              
-              {contacts.length === 0 && (
-                <p className="text-center text-muted-foreground py-4">No contacts found</p>
-              )}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
+    <Card className="w-full h-[80vh] flex flex-col">
+      <CardHeader>
+        <CardTitle>Chat with Nous AI</CardTitle>
+        <CardDescription>Using Nous: DeepHermes 3 Mistral 24B</CardDescription>
+      </CardHeader>
       
-      {/* Chat area */}
-      <Card className="col-span-3">
-        <CardHeader>
-          <CardTitle>
-            {selectedContact ? selectedContact.name : "Select a contact"}
-          </CardTitle>
-          <CardDescription>
-            {selectedContact ? `Chat with ${selectedContact.name} using Nous AI` : "Please select a contact to start chatting"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[calc(100vh-300px)]" ref={scrollAreaRef}>
-            <div className="space-y-4">
-              {messages.map(msg => (
-                <div key={msg.id} className={`flex ${msg.isFromContact ? 'justify-start' : 'justify-end'}`}>
-                  <div
-                    className={`max-w-[80%] p-3 rounded-lg ${msg.isFromContact ? 'bg-accent text-accent-foreground' : 'bg-primary text-primary-foreground'}`}
-                  >
-                    <p>{msg.content}</p>
-                    <p className="text-xs opacity-70 mt-1">
-                      {new Date(msg.timestamp).toLocaleTimeString()}
-                    </p>
-                  </div>
-                </div>
-              ))}
-              
-              {messages.length === 0 && selectedContact && (
-                <p className="text-center text-muted-foreground py-4">
-                  No messages yet. Start a conversation!
-                </p>
-              )}
-              
-              {!selectedContact && (
-                <p className="text-center text-muted-foreground py-4">
-                  Select a contact to view messages
-                </p>
-              )}
-            </div>
-          </ScrollArea>
-        </CardContent>
-        <CardFooter>
-          <div className="flex w-full space-x-2">
-            <Input
-              placeholder={selectedContact ? `Message ${selectedContact.name}...` : "Select a contact first..."}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-              disabled={!selectedContact || isLoading}
-            />
-            <Button
-              onClick={handleSendMessage}
-              disabled={!selectedContact || !message.trim() || isLoading}
+      <CardContent className="flex-1">
+        <ScrollArea className="h-full pr-4">
+          {messages.map((message, index) => (
+            <div
+              key={index}
+              className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} mb-4`}
             >
-              Send
-            </Button>
-          </div>
-        </CardFooter>
-      </Card>
-    </div>
+              <div className={`flex items-start gap-2 max-w-[80%] ${message.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                <Avatar className="mt-1">
+                  <AvatarFallback>{message.sender === 'user' ? 'U' : 'AI'}</AvatarFallback>
+                </Avatar>
+                <div
+                  className={`rounded-lg p-3 ${
+                    message.sender === 'user'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted'
+                  }`}
+                >
+                  {message.content}
+                </div>
+              </div>
+            </div>
+          ))}
+        </ScrollArea>
+      </CardContent>
+
+      <CardFooter className="gap-2">
+        <Input
+          placeholder="Type your message..."
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+          disabled={isLoading}
+        />
+        <Button onClick={handleSendMessage} disabled={isLoading}>
+          {isLoading ? 'Sending...' : 'Send'}
+        </Button>
+      </CardFooter>
+    </Card>
   );
 }
 

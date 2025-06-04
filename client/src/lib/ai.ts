@@ -25,6 +25,13 @@ export enum ContactType {
   OTHER = 'other'
 }
 
+// API configuration for Nous
+export const API_CONFIG = {
+  baseUrl: 'https://api.nous.hermes.com/v1',
+  apiKey: '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',
+  model: 'nous-hermes-3-mistral-24b'
+};
+
 // Basic intent detection
 export function detectIntent(message: string): string {
   const lowerMessage = message.toLowerCase();
@@ -223,5 +230,31 @@ export function processSelection(selection: string, contactName: string = ''): A
         ],
         isAutomatedMessage: true
       };
+  }
+}
+
+// Send a chat message to the Nous API and get a response
+export async function sendChatMessage(message: string): Promise<AIResponse> {
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to send message');
+    }
+
+    const data = await response.json();
+    return {
+      message: data.message,
+      timestamp: data.timestamp
+    };
+  } catch (error) {
+    console.error('Error sending chat message:', error);
+    throw error;
   }
 }

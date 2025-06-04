@@ -238,6 +238,41 @@ class NousService {
     const setting = await storage.getSetting('ai_assistant_active');
     return setting?.value === 'true';
   }
+
+  public async sendChatMessage(message: string) {
+    if (!this.initialized) {
+      throw new Error('Nous API not initialized. Please set API credentials first.');
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        },
+        body: JSON.stringify({
+          model: this.model,
+          messages: [{ role: 'user', content: message }],
+          temperature: 0.7,
+          max_tokens: 1000
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Nous API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return {
+        message: data.choices[0].message.content,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('Error sending message to Nous API:', error);
+      throw error;
+    }
+  }
 }
 
 export const nousService = new NousService();

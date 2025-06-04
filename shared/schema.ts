@@ -1,10 +1,10 @@
-import { pgTable, text, serial, integer, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // User schema for authentication
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
+export const users = sqliteTable("users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
 });
@@ -15,13 +15,13 @@ export const insertUserSchema = createInsertSchema(users).pick({
 });
 
 // Contacts schema for managing WhatsApp contacts
-export const contacts = pgTable("contacts", {
-  id: serial("id").primaryKey(),
+export const contacts = sqliteTable("contacts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
   phoneNumber: text("phone_number").notNull().unique(),
   category: text("category").notNull().default("uncategorized"), // business, work, personal, uncategorized
-  isExempted: boolean("is_exempted").notNull().default(false),
-  createdAt: timestamp("created_at").defaultNow(),
+  isExempted: integer("is_exempted", { mode: "boolean" }).notNull().default(false),
+  createdAt: integer("created_at", { mode: "timestamp" }).defaultNow(),
 });
 
 export const insertContactSchema = createInsertSchema(contacts).pick({
@@ -32,13 +32,13 @@ export const insertContactSchema = createInsertSchema(contacts).pick({
 });
 
 // Messages schema for storing conversation history
-export const messages = pgTable("messages", {
-  id: serial("id").primaryKey(),
+export const messages = sqliteTable("messages", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   contactId: integer("contact_id").notNull(),
   content: text("content").notNull(),
-  isFromContact: boolean("is_from_contact").notNull(),
-  timestamp: timestamp("timestamp").defaultNow(),
-  isEncrypted: boolean("is_encrypted").notNull().default(false),
+  isFromContact: integer("is_from_contact", { mode: "boolean" }).notNull(),
+  timestamp: integer("timestamp", { mode: "timestamp" }).defaultNow(),
+  isEncrypted: integer("is_encrypted", { mode: "boolean" }).notNull().default(false),
 });
 
 export const insertMessageSchema = createInsertSchema(messages).pick({
@@ -49,8 +49,8 @@ export const insertMessageSchema = createInsertSchema(messages).pick({
 });
 
 // Menu options schema for customizable menu items
-export const menuOptions = pgTable("menu_options", {
-  id: serial("id").primaryKey(),
+export const menuOptions = sqliteTable("menu_options", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   title: text("title").notNull(),
   description: text("description"),
   parentId: integer("parent_id"), // For nested menus
@@ -67,8 +67,8 @@ export const insertMenuOptionSchema = createInsertSchema(menuOptions).pick({
 });
 
 // Settings schema for app configuration
-export const settings = pgTable("settings", {
-  id: serial("id").primaryKey(),
+export const settings = sqliteTable("settings", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   key: text("key").notNull().unique(),
   value: text("value").notNull(),
   description: text("description"),
